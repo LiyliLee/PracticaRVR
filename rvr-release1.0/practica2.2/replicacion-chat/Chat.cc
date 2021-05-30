@@ -54,6 +54,7 @@ void ChatClient::login()
     em.type = ChatMessage::LOGIN;
 
     socket.send(em, socket);
+    //std::cout<<"mandar login mesaje"<<std::endl;
 }
 
 void ChatClient::logout()

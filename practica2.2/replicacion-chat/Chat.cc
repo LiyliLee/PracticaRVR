@@ -7,6 +7,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+
 // -----------------------------------------------------------------------------
 // -----------------------------------------------------------------------------
 using namespace std;
@@ -153,15 +154,23 @@ void ChatClient::input_thread()
     while (true)
     {
         // Leer stdin con std::getline
-        std::string msg;
-	    std::getline(std::cin,msg);
+       
+	   
+        char *line = NULL;
+        size_t len = 0;
+        ssize_t read;
 
+        read = getline(&line, &len, stdin);
+       
+        std::string msg(line);
+
+         free(line);
         // Enviar al servidor usando socket
         ChatMessage em(nick,msg);
         //std::cout <<"input_thread"<<std::endl;
         em.type= ChatMessage::MESSAGE;
         socket.send(em,socket);
-        std::cout <<"sendMenssage" << msg <<std::endl;
+        std::cout <<"sendMenssage" <<std::endl;
     }
 }
 
