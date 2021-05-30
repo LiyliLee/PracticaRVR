@@ -1,5 +1,11 @@
 #include "Chat.h"
+#include "Socket.h"
 #include <memory>
+#include <unistd.h>
+#include <cstring>
+#include <iostream>
+#include <stdio.h>
+#include <stdlib.h>
 
 // -----------------------------------------------------------------------------
 // -----------------------------------------------------------------------------
@@ -61,16 +67,20 @@ void ChatServer::do_messages()
 
         if (msg.type == msg.LOGIN)
         {
-            std::unique_ptr<Socket> ptrClient =std::make_unique<Socket> (newClient);
-            newClient= nullptr;
+            //std::cout << "recibir cliente login " <<std::endl;
+            std::unique_ptr<Socket> ptrClient (newClient);
+            //std::cout << "convertir newClient en puntero unico" <<std::endl;
+
             clients.push_back(std::move(ptrClient));
+            //std::cout << "meter al vector el puntero unico " <<std::endl;
 
         }
         else if (msg.type == msg.LOGOUT)
         {
+            std::cout << "recibir cliente logout " << *newClient <<std::endl;
             bool noEncontrado = true;
             auto it  = clients.begin();
-            while(it !=clients.end && noEncontrado)
+            while(it !=clients.end() && noEncontrado)
             {
                 if (**it == *newClient) 
                 {
@@ -80,22 +90,32 @@ void ChatServer::do_messages()
                 }
                 else it++;
             }
+
+            if(it == clients.end()){
+		        std::cout << "no existe este cliente" <<std::endl;
+		        return;
+            }
         }
         else if (msg.type ==msg.MESSAGE)
         {
+            std::cout << "recibir clientes mensaje " << *newClient <<std::endl;
             for (int i =0; i<clients.size();i++)
             {
-                if (*clients[i] == *newClient)
-                {
-                }
-                else
-                {
+                if (*clients[i] != *newClient)
+                { 
                     socket.send(msg,*clients[i]);
+                    std::cout<<"mandar mensaje a todo el mundo"<<std::endl;
                 }
                 
 
             }
         }
+        else 
+        {
+            std::cerr << "mensaje raro" << std::endl;
+        }
+
+        newClient = nullptr;
 
     }
 }
@@ -111,24 +131,37 @@ void ChatClient::login()
     em.type = ChatMessage::LOGIN;
 
     socket.send(em, socket);
+    //std::cout<<"mandar login"<<std::endl;
+    
 }
 
 void ChatClient::logout()
 {
     // Completar
+    std::string msg;
+
+    ChatMessage em(nick, msg);
+    em.type = ChatMessage::LOGOUT;
+
+    socket.send(em, socket);
+    //std::cout<<"mandar logout"<<std::endl;
 }
 
 void ChatClient::input_thread()
 {
+    
     while (true)
     {
         // Leer stdin con std::getline
-        std::string s;
-        std::getline(std::cin ,s);
+        std::string msg;
+	    std::getline(std::cin,msg);
+
         // Enviar al servidor usando socket
-        ChatMessage msg = ChatMessage(nick,s);
-        msg.type= ChatMessage::MESSAGE;
-        socket.send(msg,socket);
+        ChatMessage em(nick,msg);
+        //std::cout <<"input_thread"<<std::endl;
+        em.type= ChatMessage::MESSAGE;
+        socket.send(em,socket);
+        std::cout <<"sendMenssage" << msg <<std::endl;
     }
 }
 
@@ -136,6 +169,7 @@ void ChatClient::net_thread()
 {
     ChatMessage msg;
     Socket *servidor = new Socket(socket);
+
     while(true)
     {
         //Recibir Mensajes de red
